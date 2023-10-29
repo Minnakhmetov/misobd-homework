@@ -9,9 +9,7 @@ $ sudo iptables -I INPUT -p tcp --dport 9870 -j ACCEPT
 $ sudo iptables -I INPUT -p tcp --dport 8020 -j ACCEPT
 $ sudo iptables -I INPUT -p tcp --match multiport --dports 9866,9864,9867 -j ACCEPT
 $ sudo apt install iptables-persistent
-sudo netfilter-persistent saves
-
-TO DO: /etc/hosts
+$ sudo netfilter-persistent saves
 
 $ sudo apt install default-jdk
 $ wget https://dlcdn.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
