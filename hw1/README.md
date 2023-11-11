@@ -34,7 +34,7 @@ $ sudo sed -i 's|# export JAVA_HOME=|export JAVA_HOME=/usr/lib/jvm/java-11-openj
 
 $ sudo sed -z -i "s|<configuration>.*</configuration>||" /usr/local/hadoop/etc/hadoop/core-site.xml && echo "
 <configuration> 
-  <property><name>fs.defaultFS</name><value>hdfs://localhost:8020</value></property> 
+  <property><name>fs.defaultFS</name><value>hdfs://localhost:9000</value></property> 
 </configuration>
 " | sudo tee --append /usr/local/hadoop/etc/hadoop/core-site.xml &>/dev/null
 
@@ -57,17 +57,6 @@ $ sudo sed -z -i "s|<configuration>.*</configuration>||" /usr/local/hadoop/etc/h
    </property>
 </configuration>
 " | sudo tee --append /usr/local/hadoop/etc/hadoop/hdfs-site.xml &>/dev/null
-
-
-
-$ sudo sed -z -i "s|<configuration>.*</configuration>||" /usr/local/hadoop/etc/hadoop/yarn-site.xml && echo "
-<configuration>
-  <property>
-    <name>yarn.nodemanager.aux-services</name>
-    <value>mapreduce_shuffle</value>
-  </property>
-</configuration>
-" | sudo tee --append /usr/local/hadoop/etc/hadoop/yarn-site.xml &>/dev/null
 ```
 
 Заходим под пользователем hadoop.
@@ -84,7 +73,7 @@ $ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
 $ chmod 0600 ~/.ssh/authorized_keys
 ```
 
-# Эксперимент
+# Эксперимент 1
 
 Из-под пользователя haddop.
 
@@ -126,7 +115,7 @@ $ start-dfs.h
 Смотрим сколько место занимает пустая файловая система.
 
 ```
-$ du -sh /hadoop/hdfs''
+$ du -sh /hadoop/hdfs
 1.1M	/hadoop/hdfs
 ```
 
@@ -139,3 +128,100 @@ $ du -sh /hadoop
 ```
 
 Вывод: файл занял столько же места, сколько занимает в локальной файловой системе. Оно и понятно: в hdfs-site.xml указывали фактор репликации 1.
+
+# Настроим кластер с тремя узлами
+
+Проделаем конфигурацию из первого пункта на остальных двух узлах.
+
+Далее дописываем в /etc/hosts на всех трех узлах:
+
+```
+10.0.10.33 hadoop1
+10.0.10.34 hadoop2
+10.0.10.35 hadoop3
+```
+
+На всех трех узлах меняем хост, на котором запущена namenode:
+
+```
+$ sudo sed -i "s/localhost/hadoop1/" /usr/local/hadoop/etc/hadoop/core-site.xml
+```
+
+Также меняем фактор репликации:
+
+```
+$ sudo sed -z "s|<value>3</value>|<value>1</value>|" /usr/local/hadoop/etc/hadoop/hdfs-site.xml
+```
+
+Далее на hadoop1 пишем в /usr/local/hadoop/etc/hadoop/workers хосты, на которых будут хранится данные, то есть запущена datanode:
+
+```
+hadoop1
+hadoop2
+hadoop3
+```
+
+На мастере тоже будет запущена datanode, потому что, чтобы фактор репликации равный трем имел смысл, нужно хотя бы три узла, которые будут участвовать в репликации.
+
+# Эксперимент 2
+
+Заходим на hadoop1 и запускаем файловую систему, предварительно отформатировав.
+
+```
+$ rm -rf /hadoop/hdfs/datanode/*
+$ hdfs namenode -format
+$ start-dfs.h
+```
+
+Проверяем, что мастер видит все датаноды:
+
+```
+$ hdfs dfsadmin -report
+
+...
+Live datanodes (3):
+...
+```
+
+Заходим на все узлы смотрим, сколько занимает пустая файловая система.
+
+На hadoop1:
+
+```
+$ du -sh /hadoop/hdfs
+1.1M	/hadoop/hdfs
+```
+
+На hadoop2 и hadoop3 получаем одинаковый результат:
+
+```
+$ du -sh /hadoop/hdfs
+52K	/hadoop/hdfs
+```
+
+На hadoop1 чуть больше, потому что на нем запущена namenode, в котором хранятся метаданные (namenode).
+
+Заходим на hadoop1 и загружаем файл.
+
+```
+$ hdfs dfs -put test_file /
+```
+
+Снова измерим размеры.
+
+На hadoop1:
+
+```
+$ du -sh /hadoop
+66M	/hadoop/hdfs
+```
+
+На hadoop2 и hadoop3:
+
+```
+$ du -sh /hadoop
+65M	/hadoop/hdfs
+```
+
+Предполагаем, что файл успешно хранится с фактором репликации 3.
+
