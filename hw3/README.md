@@ -18,8 +18,22 @@
 ## Реализовать MapReduce приложение
 Реализовали приложение MapReduce для подсчёта каждой партии — [mapper](./mapper.py) и [reducer](./reducer.py).
 
-## Скорость работы без Hadoop
+## Скорость работы без Hadoop 
 
 ## Скорость работы c Hadoop Standalone
+С помощью следующей команды положим .csv файл на кластер hadoop:
+
+```hdfs dfs -copyFromLocal /chess_games.csv /chess_games.csv```
 
 ## Скорость работы с кластером Hadoop
+С помощью следующей команды запустим MapReduce а кластере из трёх нод:
+
+```hadoop jar $HADOOP_HOME/share/hadoop/tools/lib/hadoop-streaming-*.jar \
+    -files mapper.py,reducer.py \
+    -mapper "python3 mapper.py" \
+    -reducer "python3 reducer.py" \
+    -input /chess_games.csv \
+    -output /output
+```
+
+
