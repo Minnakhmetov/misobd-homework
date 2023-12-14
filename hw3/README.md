@@ -13,6 +13,7 @@
 * ```Classical```;
 * ```Classical tournament```;
 * ```Correspondence```.
+
 Хотим посчитать кол-во сыгранных партий каждого вида. 
 
 ## Реализовать MapReduce приложение
